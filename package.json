@@ -1,6 +1,6 @@
 {
   "name": "obsidian-reminders",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Reminders management plugin for Obsidian with sidebar view.",
   "main": "main.js",
   "scripts": {

@@ -1,7 +1,7 @@
 {
   "id": "obsidian-reminders",
   "name": "提醒事项",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "1.2.8",
   "description": "macOS 系统提醒事项集成，使用闪念笔记的交互方式。",
   "author": "lizhifeng",
