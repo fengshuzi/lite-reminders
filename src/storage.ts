@@ -1,9 +1,18 @@
 import { exec } from "child_process";
-import { promisify } from "util";
 import { Reminder } from "./types";
 import { Notice, Platform } from "obsidian";
 
-const execAsync = promisify(exec);
+const execAsync = (command: string, options: { timeout: number }): Promise<{ stdout: string }> => {
+    return new Promise((resolve, reject) => {
+        exec(command, options, (error, stdout) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve({ stdout });
+            }
+        });
+    });
+};
 
 type RemindersResult = Record<string, Array<{ title: string; id: string; due?: string }>>;
 

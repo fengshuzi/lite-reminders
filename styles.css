@@ -7,7 +7,7 @@
 }
 
 .is-hidden {
-    display: none !important;
+    display: none;
 }
 
 /* 输入区域 - 顶部固定 */
