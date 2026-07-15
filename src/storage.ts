@@ -2,14 +2,14 @@ import { exec } from "child_process";
 import { Reminder } from "./types";
 import { Notice, Platform } from "obsidian";
 
-const execAsync = (command: string, options: { timeout: number }): Promise<{ stdout: string }> => {
-    return new Promise((resolve, reject) => {
-        exec(command, options, (error, stdout) => {
-            if (error) {
-                reject(error);
-            } else {
-                resolve({ stdout });
+const execAsync = (command: string, options: { timeout: number }): Promise<string> => {
+    return new Promise<string>((resolve, reject) => {
+        exec(command, options, (err: unknown, stdout: unknown) => {
+            if (err) {
+                reject(err instanceof Error ? err : new Error(String(err)));
+                return;
             }
+            resolve(typeof stdout === "string" ? stdout : String(stdout));
         });
     });
 };
@@ -41,7 +41,7 @@ export class ReminderStorage {
         if (!this.checkMacOS()) return null;
 
         try {
-            const { stdout } = await execAsync(`osascript -l JavaScript -e '${script}'`, {
+            const stdout = await execAsync(`osascript -l JavaScript -e '${script}'`, {
                 timeout: 30000,
             });
             return stdout.trim();
