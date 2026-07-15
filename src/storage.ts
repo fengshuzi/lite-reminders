@@ -14,8 +14,6 @@ const execAsync = (command: string, options: { timeout: number }): Promise<strin
     });
 };
 
-type RemindersResult = Record<string, Array<{ title: string; id: string; due?: string }>>;
-
 export class ReminderStorage {
     private isMac: boolean;
     private listName: string;
@@ -56,7 +54,7 @@ export class ReminderStorage {
     private escapeJXA(str: string): string {
         return str
             .replace(/\\/g, "\\\\")
-            .replace(/'/g, "\\'")
+            .replace(/"/g, '\\"')
             .replace(/\n/g, "\\n");
     }
 
@@ -90,7 +88,7 @@ export class ReminderStorage {
 
     async getAllReminders(): Promise<Reminder[]> {
         const listName = this.escapeJXA(this.listName);
-        const script = `var Reminders=Application('Reminders');var result={};var lists=Reminders.lists();var listCount=lists.length;for(var i=0;i<listCount;i++){var list=lists[i];var listName=list.name();if(listName!=='${listName}')continue;var reminders=list.reminders.whose({completed:false})();var reminderCount=reminders.length;result[listName]=[];for(var j=0;j<reminderCount;j++){var r=reminders[j];var item={title:r.name(),id:r.id()};var dueDate=r.dueDate();if(dueDate&&dueDate.toString()!=='missing value'){item.due=dueDate.toISOString();}result[listName].push(item);}break;}JSON.stringify(result);`.replace(/\n/g, "");
+        const script = `var Reminders=Application("Reminders");var result={};var lists=Reminders.lists();var listCount=lists.length;for(var i=0;i<listCount;i++){var list=lists[i];var listName=list.name();if(listName!=="${listName}")continue;var reminders=list.reminders.whose({completed:false})();var reminderCount=reminders.length;result[listName]=[];for(var j=0;j<reminderCount;j++){var r=reminders[j];var item={title:r.name(),id:r.id()};var dueDate=r.dueDate();if(dueDate&&dueDate.toString()!=="missing value"){item.due=dueDate.toISOString();}result[listName].push(item);}break;}JSON.stringify(result);`.replace(/\n/g, "");
 
         const result = await this.runJXA(script);
         if (!result) return [];
@@ -103,7 +101,7 @@ export class ReminderStorage {
     }
 
     async getLists(): Promise<string[]> {
-        const script = `var Reminders=Application('Reminders');JSON.stringify(Reminders.lists().map(function(l){return l.name();}));`;
+        const script = `var Reminders=Application("Reminders");JSON.stringify(Reminders.lists().map(function(l){return l.name();}));`;
         const result = await this.runJXA(script);
         if (!result) return ["Inbox"];
 
@@ -123,8 +121,8 @@ export class ReminderStorage {
     async createReminder(title: string, listName: string, due?: string): Promise<boolean> {
         const titleEsc = this.escapeJXA(title);
         const listNameEsc = this.escapeJXA(listName);
-        const duePart = due ? `,dueDate:new Date('${due}')` : "";
-        const script = `var Reminders=Application('Reminders');var list=Reminders.lists.whose({name:'${listNameEsc}'})[0];var r=Reminders.Reminder({name:'${titleEsc}'${duePart}});list.reminders.push(r);'ok';`.replace(/\n/g, "");
+        const duePart = due ? `,dueDate:new Date("${due}")` : "";
+        const script = `var Reminders=Application("Reminders");var list=Reminders.lists.whose({name:"${listNameEsc}"})[0];var r=Reminders.Reminder({name:"${titleEsc}"${duePart}});list.reminders.push(r);"ok";`.replace(/\n/g, "");
 
         const result = await this.runJXA(script);
         if (result) {
@@ -136,7 +134,7 @@ export class ReminderStorage {
 
     async deleteReminder(id: string): Promise<boolean> {
         const idEsc = this.escapeJXA(id);
-        const script = `var Reminders=Application('Reminders');var r=Reminders.reminders.byId('${idEsc}');r.delete();'ok';`;
+        const script = `var Reminders=Application("Reminders");var r=Reminders.reminders.byId("${idEsc}");r.delete();"ok";`;
         const result = await this.runJXA(script);
         if (result) {
             new Notice("提醒已删除");
@@ -148,8 +146,8 @@ export class ReminderStorage {
     async updateReminder(id: string, title: string, due?: string): Promise<boolean> {
         const idEsc = this.escapeJXA(id);
         const titleEsc = this.escapeJXA(title);
-        const duePart = due ? `r.dueDate=new Date('${due}');` : "r.dueDate=null;";
-        const script = `var Reminders=Application('Reminders');var r=Reminders.reminders.byId('${idEsc}');r.name='${titleEsc}';${duePart}'ok';`;
+        const duePart = due ? `r.dueDate=new Date("${due}");` : "r.dueDate=null;";
+        const script = `var Reminders=Application("Reminders");var r=Reminders.reminders.byId("${idEsc}");r.name="${titleEsc}";${duePart}"ok";`;
         const result = await this.runJXA(script);
         if (result) {
             new Notice("提醒已更新");
@@ -160,7 +158,7 @@ export class ReminderStorage {
 
     async toggleComplete(id: string): Promise<boolean> {
         const idEsc = this.escapeJXA(id);
-        const script = `var Reminders=Application('Reminders');var r=Reminders.reminders.byId('${idEsc}');r.completed=true;'ok';`;
+        const script = `var Reminders=Application("Reminders");var r=Reminders.reminders.byId("${idEsc}");r.completed=true;"ok";`;
         const result = await this.runJXA(script);
         if (result) {
             new Notice("提醒已完成");
