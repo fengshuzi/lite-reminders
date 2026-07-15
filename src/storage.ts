@@ -45,8 +45,10 @@ export class ReminderStorage {
                 timeout: 30000,
             });
             return stdout.trim();
-        } catch {
-            new Notice("执行提醒事项操作失败");
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : String(error);
+            console.error("[Reminders] JXA Error:", msg);
+            new Notice(`操作失败: ${msg}`);
             return null;
         }
     }
