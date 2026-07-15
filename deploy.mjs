@@ -17,19 +17,19 @@ const NOTE_DEMO_PATH = join(
 const VAULTS = [
   {
     name: 'Pro',
-    path: join(BASE_PATH, '.obsidian-pro/plugins/obsidian-reminders')
+    path: join(BASE_PATH, '.obsidian-pro/plugins/lite-reminders')
   },
   {
     name: '2017',
-    path: join(BASE_PATH, '.obsidian-2017/plugins/obsidian-reminders')
+    path: join(BASE_PATH, '.obsidian-2017/plugins/lite-reminders')
   },
   {
     name: 'Zhang',
-    path: join(BASE_PATH, '.obsidian-zhang/plugins/obsidian-reminders')
+    path: join(BASE_PATH, '.obsidian-zhang/plugins/lite-reminders')
   },
   {
     name: 'Note-Demo',
-    path: join(NOTE_DEMO_PATH, '.obsidian/plugins/obsidian-reminders')
+    path: join(NOTE_DEMO_PATH, '.obsidian/plugins/lite-reminders')
   }
 ];
 

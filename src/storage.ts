@@ -5,6 +5,8 @@ import { Notice, Platform } from "obsidian";
 
 const execAsync = promisify(exec);
 
+type RemindersResult = Record<string, Array<{ title: string; id: string; due?: string }>>;
+
 export class ReminderStorage {
     private isMac: boolean;
     private listName: string;
@@ -14,12 +16,10 @@ export class ReminderStorage {
         this.listName = listName;
     }
 
-    // 设置列表名称
     setListName(listName: string): void {
         this.listName = listName || "Inbox";
     }
 
-    // ========== macOS 检查 ==========
     private checkMacOS(): boolean {
         if (!this.isMac) {
             new Notice("此功能仅支持 macOS 系统");
@@ -28,105 +28,92 @@ export class ReminderStorage {
         return true;
     }
 
-    // ========== JXA 脚本 ==========
-    private async runJXA(script: string): Promise<any> {
+    private async runJXA(script: string): Promise<string | null> {
         if (!this.checkMacOS()) return null;
 
         try {
-            const { stdout } = await execAsync(`osascript -l JavaScript -e "${script}"`, {
+            const { stdout } = await execAsync(`osascript -l JavaScript -e '${script}'`, {
                 timeout: 30000,
             });
             return stdout.trim();
-        } catch (error) {
-            console.error("[Reminders] JXA Error:", error);
+        } catch {
             new Notice("执行提醒事项操作失败");
             return null;
         }
     }
 
-    // ========== 查询所有提醒 (查询配置的列表) ==========
-    async getAllReminders(): Promise<Reminder[]> {
-        const script = `
-var Reminders=Application('Reminders');
-var result={};
-var lists=Reminders.lists();
-var listCount=lists.length;
-for(var i=0;i<listCount;i++){
-    var list=lists[i];
-    var listName=list.name();
-    if(listName!=='${this.listName}')continue;
-    var reminders=list.reminders.whose({completed:false})();
-    var reminderCount=reminders.length;
-    result[listName]=[];
-    for(var j=0;j<reminderCount;j++){
-        var r=reminders[j];
-        var item={title:r.name(),id:r.id()};
-        var dueDate=r.dueDate();
-        if(dueDate&&dueDate.toString()!=='missing value'){
-            item.due=dueDate.toISOString();
-        }
-        result[listName].push(item);
+    private escapeJXA(str: string): string {
+        return str
+            .replace(/\\/g, "\\\\")
+            .replace(/'/g, "\\'")
+            .replace(/\n/g, "\\n");
     }
-    break;
-}
-JSON.stringify(result);
-        `.replace(/\n/g, "");
+
+    private parseRemindersResult(result: string): Reminder[] {
+        const parsed: unknown = JSON.parse(result);
+        if (!parsed || typeof parsed !== "object") return [];
+
+        const data = parsed as Record<string, unknown>;
+        const reminders: Reminder[] = [];
+
+        for (const [listName, items] of Object.entries(data)) {
+            if (!Array.isArray(items)) continue;
+            for (const item of items) {
+                if (!item || typeof item !== "object") continue;
+                const obj = item as Record<string, unknown>;
+                if (typeof obj.id !== "string" || typeof obj.title !== "string") continue;
+                reminders.push({
+                    id: obj.id,
+                    title: obj.title,
+                    list: listName,
+                    due: typeof obj.due === "string" ? obj.due : undefined,
+                    completed: false,
+                    created: "",
+                    updated: "",
+                });
+            }
+        }
+
+        return reminders;
+    }
+
+    async getAllReminders(): Promise<Reminder[]> {
+        const listName = this.escapeJXA(this.listName);
+        const script = `var Reminders=Application('Reminders');var result={};var lists=Reminders.lists();var listCount=lists.length;for(var i=0;i<listCount;i++){var list=lists[i];var listName=list.name();if(listName!=='${listName}')continue;var reminders=list.reminders.whose({completed:false})();var reminderCount=reminders.length;result[listName]=[];for(var j=0;j<reminderCount;j++){var r=reminders[j];var item={title:r.name(),id:r.id()};var dueDate=r.dueDate();if(dueDate&&dueDate.toString()!=='missing value'){item.due=dueDate.toISOString();}result[listName].push(item);}break;}JSON.stringify(result);`.replace(/\n/g, "");
 
         const result = await this.runJXA(script);
         if (!result) return [];
 
         try {
-            const data = JSON.parse(result);
-            const reminders: Reminder[] = [];
-
-            for (const [listName, items] of Object.entries(data)) {
-                for (const item of items as any[]) {
-                    reminders.push({
-                        id: item.id,
-                        title: item.title,
-                        list: listName,
-                        due: item.due,
-                        completed: false,
-                        created: "",
-                        updated: "",
-                    });
-                }
-            }
-
-            return reminders;
-        } catch (error) {
-            console.error("[Reminders] Parse Error:", error);
+            return this.parseRemindersResult(result);
+        } catch {
             return [];
         }
     }
 
-    // ========== 获取所有列表 ==========
     async getLists(): Promise<string[]> {
         const script = `var Reminders=Application('Reminders');JSON.stringify(Reminders.lists().map(function(l){return l.name();}));`;
         const result = await this.runJXA(script);
         if (!result) return ["Inbox"];
 
         try {
-            return JSON.parse(result);
+            const parsed: unknown = JSON.parse(result);
+            if (!Array.isArray(parsed)) return ["Inbox"];
+            return parsed.filter((item): item is string => typeof item === "string");
         } catch {
             return ["Inbox"];
         }
     }
 
-    // ========== 增 (Create) ==========
     async addReminder(title: string, due?: string): Promise<boolean> {
         return this.createReminder(title, this.listName, due);
     }
 
     async createReminder(title: string, listName: string, due?: string): Promise<boolean> {
+        const titleEsc = this.escapeJXA(title);
+        const listNameEsc = this.escapeJXA(listName);
         const duePart = due ? `,dueDate:new Date('${due}')` : "";
-        const script = `
-var Reminders=Application('Reminders');
-var list=Reminders.lists.whose({name:'${listName}'})[0];
-var r=Reminders.Reminder({name:'${title}'${duePart}});
-list.reminders.push(r);
-'ok';
-        `.replace(/\n/g, "");
+        const script = `var Reminders=Application('Reminders');var list=Reminders.lists.whose({name:'${listNameEsc}'})[0];var r=Reminders.Reminder({name:'${titleEsc}'${duePart}});list.reminders.push(r);'ok';`.replace(/\n/g, "");
 
         const result = await this.runJXA(script);
         if (result) {
@@ -136,9 +123,9 @@ list.reminders.push(r);
         return false;
     }
 
-    // ========== 删 (Delete) ==========
     async deleteReminder(id: string): Promise<boolean> {
-        const script = `var Reminders=Application('Reminders');var r=Reminders.reminders.byId('${id}');r.delete();'ok';`;
+        const idEsc = this.escapeJXA(id);
+        const script = `var Reminders=Application('Reminders');var r=Reminders.reminders.byId('${idEsc}');r.delete();'ok';`;
         const result = await this.runJXA(script);
         if (result) {
             new Notice("提醒已删除");
@@ -147,10 +134,11 @@ list.reminders.push(r);
         return false;
     }
 
-    // ========== 改 (Update) ==========
     async updateReminder(id: string, title: string, due?: string): Promise<boolean> {
+        const idEsc = this.escapeJXA(id);
+        const titleEsc = this.escapeJXA(title);
         const duePart = due ? `r.dueDate=new Date('${due}');` : "r.dueDate=null;";
-        const script = `var Reminders=Application('Reminders');var r=Reminders.reminders.byId('${id}');r.name='${title}';${duePart}'ok';`;
+        const script = `var Reminders=Application('Reminders');var r=Reminders.reminders.byId('${idEsc}');r.name='${titleEsc}';${duePart}'ok';`;
         const result = await this.runJXA(script);
         if (result) {
             new Notice("提醒已更新");
@@ -159,9 +147,9 @@ list.reminders.push(r);
         return false;
     }
 
-    // ========== 完成提醒 ==========
     async toggleComplete(id: string): Promise<boolean> {
-        const script = `var Reminders=Application('Reminders');var r=Reminders.reminders.byId('${id}');r.completed=true;'ok';`;
+        const idEsc = this.escapeJXA(id);
+        const script = `var Reminders=Application('Reminders');var r=Reminders.reminders.byId('${idEsc}');r.completed=true;'ok';`;
         const result = await this.runJXA(script);
         if (result) {
             new Notice("提醒已完成");
@@ -170,7 +158,6 @@ list.reminders.push(r);
         return false;
     }
 
-    // ========== 辅助方法（兼容现有接口） ==========
     getActiveReminders(): Reminder[] {
         return [];
     }

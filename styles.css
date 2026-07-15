@@ -6,6 +6,10 @@
     background: var(--background-primary);
 }
 
+.is-hidden {
+    display: none !important;
+}
+
 /* 输入区域 - 顶部固定 */
 .reminders-input-area {
     position: sticky;
@@ -50,6 +54,12 @@
     color: var(--text-muted);
 }
 
+.reminders-input-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
 .reminders-input-actions {
     display: flex;
     justify-content: space-between;
@@ -88,23 +98,28 @@
     color: var(--text-on-accent);
 }
 
-.reminders-time-input {
-    width: 100%;
+.reminders-time-display {
     margin-top: 12px;
-    padding: 10px 12px;
-    border: 1px solid var(--background-modifier-border);
+    padding: 8px 12px;
+    background: var(--background-secondary);
     border-radius: 6px;
-    background: var(--background-primary);
-    color: var(--text-normal);
-    font-size: 14px;
-    font-family: var(--font-text);
-    transition: all 0.2s;
+    font-size: 13px;
 }
 
-.reminders-time-input:focus {
-    outline: none;
-    border-color: var(--interactive-accent);
-    box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+.reminders-time-display-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.reminders-time-clear {
+    padding: 2px 8px;
+    font-size: 12px;
+}
+
+.reminders-action-buttons {
+    display: flex;
+    gap: 8px;
 }
 
 .reminders-cancel-btn {
@@ -268,12 +283,11 @@
     .reminders-list-container {
         padding: 20px 16px;
     }
-    
+
     .reminders-input-area {
         padding: 16px;
     }
 }
-
 
 /* 设置页打赏区 */
 .plugin-donate-section {
@@ -310,6 +324,31 @@
     border-radius: 8px;
     display: block;
     cursor: zoom-in;
+}
+.plugin-donate-img {
+    width: 320px;
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    display: block;
+    cursor: zoom-in;
+}
+.plugin-donate-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.82);
+    cursor: zoom-out;
+}
+.plugin-donate-lightbox-img {
+    max-width: 96vw;
+    max-height: 92vh;
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
 }
 .plugin-donate-label {
     font-size: 0.78rem;
