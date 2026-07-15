@@ -58,50 +58,41 @@ export class ReminderStorage {
             .replace(/\n/g, "\\n");
     }
 
-    private parseRemindersResult(result: string): Reminder[] {
-        const parsed: unknown = JSON.parse(result);
-        if (!parsed || typeof parsed !== "object") return [];
-
-        const data = parsed as Record<string, unknown>;
-        const reminders: Reminder[] = [];
-
-        for (const [listName, items] of Object.entries(data)) {
-            if (!Array.isArray(items)) continue;
-            for (const item of items) {
-                if (!item || typeof item !== "object") continue;
-                const obj = item as Record<string, unknown>;
-                if (typeof obj.id !== "string" || typeof obj.title !== "string") continue;
-                reminders.push({
-                    id: obj.id,
-                    title: obj.title,
-                    list: listName,
-                    due: typeof obj.due === "string" ? obj.due : undefined,
-                    completed: false,
-                    created: "",
-                    updated: "",
-                });
-            }
-        }
-
-        return reminders;
-    }
-
     async getAllReminders(): Promise<Reminder[]> {
         const listName = this.escapeJXA(this.listName);
-        const script = `var Reminders=Application("Reminders");var result={};var lists=Reminders.lists();var listCount=lists.length;for(var i=0;i<listCount;i++){var list=lists[i];var listName=list.name();if(listName!=="${listName}")continue;var reminders=list.reminders.whose({completed:false})();var reminderCount=reminders.length;result[listName]=[];for(var j=0;j<reminderCount;j++){var r=reminders[j];var item={title:r.name(),id:r.id()};var dueDate=r.dueDate();if(dueDate&&dueDate.toString()!=="missing value"){item.due=dueDate.toISOString();}result[listName].push(item);}break;}JSON.stringify(result);`.replace(/\n/g, "");
+        const script = `ObjC.import("EventKit");var store=$.EKEventStore.alloc.init;var status=$.EKEventStore.authorizationStatusForEntityType(1);if(status!=3){store.requestAccessToEntityTypeCompletion(1,null);delay(3);}var cals=store.calendarsForEntityType(1);var predicate=store.predicateForRemindersInCalendars(cals);var allReminders=store.remindersMatchingPredicate(predicate);var result=[];for(var i=0;i<allReminders.count;i++){var r=allReminders.objectAtIndex(i);if(r.completed)continue;var cal=ObjC.unwrap(r.calendar.title);if(cal!=="${listName}")continue;var item={title:ObjC.unwrap(r.title),id:ObjC.unwrap(r.calendarItemIdentifier),list:cal};var comps=r.dueDateComponents;if(comps&&comps.year){item.due=new Date(comps.year,comps.month-1,comps.day,comps.hour,comps.minute).toISOString();}result.push(item);}JSON.stringify(result);`;
 
         const result = await this.runJXA(script);
         if (!result) return [];
 
         try {
-            return this.parseRemindersResult(result);
+            const parsed: unknown = JSON.parse(result);
+            if (!Array.isArray(parsed)) return [];
+            return parsed.filter(
+                (item): item is Reminder =>
+                    item !== null &&
+                    typeof item === "object" &&
+                    typeof (item as Record<string, unknown>).id === "string" &&
+                    typeof (item as Record<string, unknown>).title === "string"
+            ).map((item) => {
+                const obj = item as Record<string, unknown>;
+                return {
+                    id: obj.id as string,
+                    title: obj.title as string,
+                    list: typeof obj.list === "string" ? obj.list : "",
+                    due: typeof obj.due === "string" ? obj.due : undefined,
+                    completed: false,
+                    created: "",
+                    updated: "",
+                };
+            });
         } catch {
             return [];
         }
     }
 
     async getLists(): Promise<string[]> {
-        const script = `var Reminders=Application("Reminders");JSON.stringify(Reminders.lists().map(function(l){return l.name();}));`;
+        const script = `ObjC.import("EventKit");var store=$.EKEventStore.alloc.init;var status=$.EKEventStore.authorizationStatusForEntityType(1);if(status!=3){store.requestAccessToEntityTypeCompletion(1,null);delay(3);}var cals=store.calendarsForEntityType(1);var result=[];for(var i=0;i<cals.count;i++){result.push(ObjC.unwrap(cals.objectAtIndex(i).title));}JSON.stringify(result);`;
         const result = await this.runJXA(script);
         if (!result) return ["Inbox"];
 
@@ -121,11 +112,13 @@ export class ReminderStorage {
     async createReminder(title: string, listName: string, due?: string): Promise<boolean> {
         const titleEsc = this.escapeJXA(title);
         const listNameEsc = this.escapeJXA(listName);
-        const duePart = due ? `,dueDate:new Date("${due}")` : "";
-        const script = `var Reminders=Application("Reminders");var list=Reminders.lists.whose({name:"${listNameEsc}"})[0];var r=Reminders.Reminder({name:"${titleEsc}"${duePart}});list.reminders.push(r);"ok";`.replace(/\n/g, "");
+        const duePart = due
+            ? `var d=new Date("${due}");var comps=$.NSDateComponents.alloc.init;comps.year=d.getFullYear();comps.month=d.getMonth()+1;comps.day=d.getDate();comps.hour=d.getHours();comps.minute=d.getMinutes();r.dueDateComponents=comps;`
+            : "";
+        const script = `ObjC.import("EventKit");var store=$.EKEventStore.alloc.init;var status=$.EKEventStore.authorizationStatusForEntityType(1);if(status!=3){store.requestAccessToEntityTypeCompletion(1,null);delay(3);}var cals=store.calendarsForEntityType(1);var targetCal=null;for(var i=0;i<cals.count;i++){var cal=cals.objectAtIndex(i);if(ObjC.unwrap(cal.title)==="${listNameEsc}"){targetCal=cal;break;}}if(!targetCal){"calendar not found";}else{var r=$.EKReminder.reminderWithEventStore(store);r.title=$("${titleEsc}");r.calendar=targetCal;${duePart}var error=$();store.saveReminderCommitError(r,true,error);error.js?error.js.localizedDescription:"ok";}`;
 
         const result = await this.runJXA(script);
-        if (result) {
+        if (result === "ok") {
             new Notice("提醒已添加");
             return true;
         }
@@ -134,9 +127,10 @@ export class ReminderStorage {
 
     async deleteReminder(id: string): Promise<boolean> {
         const idEsc = this.escapeJXA(id);
-        const script = `var Reminders=Application("Reminders");var r=Reminders.reminders.byId("${idEsc}");r.delete();"ok";`;
+        const script = `ObjC.import("EventKit");var store=$.EKEventStore.alloc.init;var item=store.calendarItemWithIdentifier("${idEsc}");if(!item){"not found";}else{var error=$();store.removeReminderCommitError(item,true,error);error.js?error.js.localizedDescription:"ok";}`;
+
         const result = await this.runJXA(script);
-        if (result) {
+        if (result === "ok") {
             new Notice("提醒已删除");
             return true;
         }
@@ -146,10 +140,13 @@ export class ReminderStorage {
     async updateReminder(id: string, title: string, due?: string): Promise<boolean> {
         const idEsc = this.escapeJXA(id);
         const titleEsc = this.escapeJXA(title);
-        const duePart = due ? `r.dueDate=new Date("${due}");` : "r.dueDate=null;";
-        const script = `var Reminders=Application("Reminders");var r=Reminders.reminders.byId("${idEsc}");r.name="${titleEsc}";${duePart}"ok";`;
+        const duePart = due
+            ? `var d=new Date("${due}");var comps=$.NSDateComponents.alloc.init;comps.year=d.getFullYear();comps.month=d.getMonth()+1;comps.day=d.getDate();comps.hour=d.getHours();comps.minute=d.getMinutes();r.dueDateComponents=comps;`
+            : "r.dueDateComponents=null;";
+        const script = `ObjC.import("EventKit");var store=$.EKEventStore.alloc.init;var item=store.calendarItemWithIdentifier("${idEsc}");if(!item){"not found";}else{item.title=$("${titleEsc}");${duePart}var error=$();store.saveReminderCommitError(item,true,error);error.js?error.js.localizedDescription:"ok";}`;
+
         const result = await this.runJXA(script);
-        if (result) {
+        if (result === "ok") {
             new Notice("提醒已更新");
             return true;
         }
@@ -158,9 +155,10 @@ export class ReminderStorage {
 
     async toggleComplete(id: string): Promise<boolean> {
         const idEsc = this.escapeJXA(id);
-        const script = `var Reminders=Application("Reminders");var r=Reminders.reminders.byId("${idEsc}");r.completed=true;"ok";`;
+        const script = `ObjC.import("EventKit");var store=$.EKEventStore.alloc.init;var item=store.calendarItemWithIdentifier("${idEsc}");if(!item){"not found";}else{item.completed=true;var error=$();store.saveReminderCommitError(item,true,error);error.js?error.js.localizedDescription:"ok";}`;
+
         const result = await this.runJXA(script);
-        if (result) {
+        if (result === "ok") {
             new Notice("提醒已完成");
             return true;
         }
