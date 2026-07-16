@@ -1,359 +1,538 @@
-/* 主容器 - Thino 风格 */
+/* ===== Lite Reminders — product-level UI tokens ===== */
 .reminders-view {
-    padding: 0;
-    height: 100%;
-    overflow-y: auto;
-    background: var(--background-primary);
+    --lr-radius-sm: 8px;
+    --lr-radius-md: 11px;
+    --lr-radius-lg: 18px;
+    --lr-radius-pill: 9999px;
+
+    --lr-accent: var(--interactive-accent, #0066cc);
+    --lr-accent-hover: var(--interactive-accent-hover, #0071e3);
+    --lr-surface: var(--background-primary, #ffffff);
+    --lr-surface-elevated: var(--background-secondary, #fafafc);
+    --lr-border: var(--background-modifier-border, #e0e0e0);
+    --lr-border-hover: var(--background-modifier-border-hover, #d0d0d5);
+    --lr-text: var(--text-normal, #1d1d1f);
+    --lr-text-muted: var(--text-muted, #7a7a7a);
+    --lr-text-on-accent: var(--text-on-accent, #ffffff);
+    --lr-hover: var(--background-modifier-hover, rgba(0, 0, 0, 0.05));
+
+    --lr-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+    --lr-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --lr-shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+
+    font-family: var(--font-text, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif);
+    color: var(--lr-text);
+    background: var(--lr-surface-elevated);
+    min-height: 100%;
 }
 
-.is-hidden {
-    display: none;
-}
-
-/* 输入区域 - 顶部固定 */
+/* ===== Composer ===== */
 .reminders-input-area {
     position: sticky;
     top: 0;
-    z-index: 100;
-    background: var(--background-primary);
-    border-bottom: 1px solid var(--background-modifier-border);
-    padding: 20px 40px;
+    z-index: 10;
+    padding: 20px 24px 16px;
+    background: color-mix(in srgb, var(--lr-surface-elevated) 88%, transparent);
+    backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--lr-border);
 }
 
 .reminders-input-wrapper {
-    max-width: 900px;
+    max-width: 720px;
     margin: 0 auto;
-    background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 12px;
-    padding: 16px;
-    transition: all 0.2s;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    background: var(--lr-surface);
+    border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    padding: 16px 18px;
+    box-shadow: var(--lr-shadow-sm);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .reminders-input-wrapper:focus-within {
-    border-color: var(--interactive-accent);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-color: var(--lr-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--lr-accent) 12%, transparent), var(--lr-shadow-md);
+}
+
+.reminders-input-hint {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--lr-accent);
+    margin-bottom: 8px;
+    letter-spacing: -0.12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .reminders-input {
     width: 100%;
     border: none;
     background: transparent;
+    color: var(--lr-text);
+    font-family: inherit;
+    font-size: 17px;
+    line-height: 1.5;
+    letter-spacing: -0.374px;
     resize: none;
-    font-size: 15px;
-    line-height: 1.6;
-    color: var(--text-normal);
-    font-family: var(--font-text);
     outline: none;
-    margin-bottom: 12px;
-    min-height: 60px;
+    min-height: 56px;
+    padding: 0;
 }
 
 .reminders-input::placeholder {
-    color: var(--text-muted);
+    color: var(--lr-text-muted);
 }
 
-.reminders-input-hint {
+.reminders-time-display {
+    margin-top: 10px;
+}
+
+.reminders-time-display-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--lr-surface-elevated);
+    border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-pill);
+    padding: 5px 5px 5px 12px;
+}
+
+.reminders-time-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--lr-text);
+}
+
+.reminders-time-chip svg {
+    width: 14px;
+    height: 14px;
+    color: var(--lr-accent);
+}
+
+.reminders-time-clear {
+    border: none;
+    background: transparent;
+    color: var(--lr-text-muted);
     font-size: 12px;
-    color: var(--text-muted);
-    margin-bottom: 8px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: var(--lr-radius-pill);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.reminders-time-clear:hover {
+    background: var(--lr-hover);
+    color: var(--lr-text);
 }
 
 .reminders-input-actions {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding-top: 8px;
-    border-top: 1px solid var(--background-modifier-border);
+    justify-content: space-between;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--lr-border);
 }
 
 .reminders-input-toolbar {
     display: flex;
+    align-items: center;
     gap: 8px;
 }
 
 .reminders-toolbar-btn {
-    padding: 8px;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--background-primary);
-    cursor: pointer;
-    border-radius: 6px;
-    color: var(--text-muted);
-    transition: all 0.2s;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid transparent;
+    border-radius: var(--lr-radius-md);
+    background: transparent;
+    color: var(--lr-text-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .reminders-toolbar-btn:hover {
-    background: var(--background-modifier-hover);
-    border-color: var(--interactive-accent);
-    color: var(--text-normal);
+    background: var(--lr-hover);
+    color: var(--lr-text);
 }
 
 .reminders-toolbar-btn.active {
-    background: var(--interactive-accent);
-    border-color: var(--interactive-accent);
-    color: var(--text-on-accent);
-}
-
-.reminders-time-display {
-    margin-top: 12px;
-    padding: 8px 12px;
-    background: var(--background-secondary);
-    border-radius: 6px;
-    font-size: 13px;
-}
-
-.reminders-time-display-inner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.reminders-time-clear {
-    padding: 2px 8px;
-    font-size: 12px;
+    background: color-mix(in srgb, var(--lr-accent) 10%, transparent);
+    color: var(--lr-accent);
+    border-color: color-mix(in srgb, var(--lr-accent) 20%, transparent);
 }
 
 .reminders-action-buttons {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    gap: 10px;
 }
 
 .reminders-cancel-btn {
-    padding: 8px 20px;
+    padding: 8px 16px;
     border: none;
-    background: var(--background-secondary);
-    color: var(--text-normal);
+    background: transparent;
+    color: var(--lr-text-muted);
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: var(--lr-radius-pill);
     font-size: 14px;
     font-weight: 500;
-    transition: all 0.2s;
+    transition: background 0.15s, color 0.15s;
 }
 
 .reminders-cancel-btn:hover {
-    background: var(--background-modifier-hover);
+    background: var(--lr-hover);
+    color: var(--lr-text);
 }
 
 .reminders-submit-btn {
-    padding: 8px 20px;
+    padding: 9px 20px;
     border: none;
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
+    background: var(--lr-accent);
+    color: var(--lr-text-on-accent);
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: var(--lr-radius-pill);
     font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s;
+    font-weight: 600;
+    letter-spacing: -0.12px;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    box-shadow: var(--lr-shadow-sm);
 }
 
 .reminders-submit-btn:hover {
-    background: var(--interactive-accent-hover);
-    transform: translateY(-1px);
+    background: var(--lr-accent-hover);
+    box-shadow: var(--lr-shadow-md);
 }
 
-/* 列表容器 */
+.reminders-submit-btn:active {
+    transform: scale(0.98);
+}
+
+/* ===== List container ===== */
 .reminders-list-container {
-    padding: 32px 40px;
-    max-width: 900px;
+    padding: 28px 24px 48px;
+    max-width: 720px;
     margin: 0 auto;
 }
 
-/* 空状态 */
+/* ===== Empty state ===== */
 .reminders-empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 80px 20px;
+    padding: 96px 20px;
     text-align: center;
 }
 
 .reminders-empty-icon {
-    font-size: 64px;
+    font-size: 56px;
     margin-bottom: 16px;
-    opacity: 0.5;
+    opacity: 0.45;
 }
 
 .reminders-empty-title {
-    font-size: 18px;
+    font-size: 21px;
     font-weight: 600;
-    color: var(--text-normal);
-    margin-bottom: 8px;
+    color: var(--lr-text);
+    margin-bottom: 6px;
+    letter-spacing: 0.231px;
 }
 
 .reminders-empty-desc {
-    font-size: 14px;
-    color: var(--text-muted);
+    font-size: 15px;
+    color: var(--lr-text-muted);
+    letter-spacing: -0.224px;
 }
 
-/* 提醒项 */
-.reminder-item {
-    margin-bottom: 20px;
+/* ===== Day group ===== */
+.reminders-day-group {
+    margin-bottom: 28px;
 }
 
-/* 卡片样式 - Thino 风格 */
+.reminders-day-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 0 4px;
+}
+
+.reminders-day-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--lr-text);
+    letter-spacing: -0.12px;
+}
+
+.reminders-day-count {
+    font-size: 13px;
+    color: var(--lr-text-muted);
+    font-weight: 500;
+}
+
+.reminders-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ===== Reminder card ===== */
 .reminder-card {
-    background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 12px;
-    padding: 16px 20px;
-    transition: all 0.2s ease;
+    background: var(--lr-surface);
+    border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    padding: 14px 16px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     position: relative;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--lr-shadow-sm);
 }
 
 .reminder-card:hover {
-    border-color: var(--interactive-accent);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
+    border-color: var(--lr-border-hover);
+    box-shadow: var(--lr-shadow-md);
+    transform: translateY(-1px);
 }
 
-/* 卡片头部 - 时间（左）+ 操作按钮（右）*/
 .reminder-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 4px;
+    gap: 12px;
 }
 
-/* 时间显示 - 在卡片内左上角 */
 .reminder-card-time {
-    font-size: 12px;
-    color: var(--text-muted);
-    font-weight: 400;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--lr-accent);
+    font-weight: 600;
+    letter-spacing: -0.12px;
+    font-variant-numeric: tabular-nums;
 }
 
-/* 右上角操作按钮 */
+.reminder-card-time.no-time {
+    color: var(--lr-text-muted);
+    font-weight: 500;
+}
+
 .reminder-card-actions {
     display: flex;
-    gap: 4px;
+    gap: 2px;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s ease;
 }
 
 .reminder-card:hover .reminder-card-actions {
     opacity: 1;
 }
 
-.reminder-more-btn {
-    padding: 6px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    border-radius: 6px;
-    color: var(--text-muted);
-    transition: all 0.2s;
-    display: flex;
+.reminder-action-btn {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--lr-text-muted);
+    cursor: pointer;
+    border-radius: var(--lr-radius-md);
+    transition: background 0.15s, color 0.15s;
 }
 
-.reminder-more-btn:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
+.reminder-action-btn:hover {
+    background: var(--lr-hover);
+    color: var(--lr-text);
 }
 
-/* 卡片内容 */
+.reminder-action-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
 .reminder-card-body {
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
 }
 
 .reminder-card-title {
-    font-size: 15px;
-    line-height: 1.7;
-    color: var(--text-normal);
+    font-size: 16px;
+    line-height: 1.5;
+    letter-spacing: -0.32px;
+    color: var(--lr-text);
     word-wrap: break-word;
     white-space: pre-wrap;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-    .reminders-list-container {
-        padding: 20px 16px;
-    }
-
-    .reminders-input-area {
-        padding: 16px;
-    }
+/* ===== Loading ===== */
+.reminders-loading {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--lr-text-muted);
+    font-size: 14px;
+    letter-spacing: -0.224px;
 }
 
-/* 设置页打赏区 */
+/* ===== Modal ===== */
+.reminders-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.reminders-modal-btn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: var(--lr-radius-pill);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--lr-surface-elevated);
+    color: var(--lr-text);
+    transition: background 0.15s;
+}
+
+.reminders-modal-btn:hover {
+    background: var(--lr-hover);
+}
+
+.reminders-modal-btn.mod-warning {
+    background: var(--background-modifier-error);
+    color: var(--text-on-accent);
+}
+
+.reminders-modal-btn.mod-warning:hover {
+    filter: brightness(1.05);
+}
+
+/* ===== DateTime Picker Modal ===== */
+.datetime-picker-modal {
+    padding: 16px;
+}
+
+.datetime-group {
+    margin-bottom: 16px;
+}
+
+.datetime-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--lr-text);
+    margin-bottom: 8px;
+    letter-spacing: -0.12px;
+}
+
+.datetime-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-md);
+    background: var(--lr-surface);
+    color: var(--lr-text);
+    font-size: 16px;
+    font-family: inherit;
+    letter-spacing: -0.32px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.datetime-input:focus {
+    outline: none;
+    border-color: var(--lr-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--lr-accent) 10%, transparent);
+}
+
+.datetime-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.datetime-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: var(--lr-radius-pill);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.datetime-btn:active {
+    transform: scale(0.98);
+}
+
+.datetime-btn-cancel {
+    background: var(--lr-surface-elevated);
+    color: var(--lr-text);
+}
+
+.datetime-btn-cancel:hover {
+    background: var(--lr-hover);
+}
+
+.datetime-btn-confirm {
+    background: var(--lr-accent);
+    color: var(--lr-text-on-accent);
+}
+
+.datetime-btn-confirm:hover {
+    background: var(--lr-accent-hover);
+}
+
+/* ===== Settings donate section ===== */
 .plugin-donate-section {
     margin-top: 48px;
     padding-top: 24px;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: 1px solid var(--lr-border);
     text-align: center;
 }
+
 .plugin-donate-section h3 {
     font-size: 1rem;
     font-weight: 600;
-    color: var(--text-normal);
+    color: var(--lr-text);
     margin-bottom: 6px;
 }
+
 .plugin-donate-desc {
     font-size: 0.85rem;
-    color: var(--text-muted);
+    color: var(--lr-text-muted);
     margin-bottom: 16px;
 }
+
 .plugin-donate-qr {
     display: inline-flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
     padding: 16px 20px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 12px;
-    background: var(--background-secondary);
+    border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    background: var(--lr-surface-elevated);
 }
-.plugin-donate-qr img {
-    width: 320px;
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-    display: block;
-    cursor: zoom-in;
-}
+
 .plugin-donate-img {
     width: 320px;
     max-width: 100%;
     height: auto;
-    border-radius: 8px;
+    border-radius: var(--lr-radius-md);
     display: block;
     cursor: zoom-in;
-}
-.plugin-donate-lightbox {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background: rgba(0, 0, 0, 0.82);
-    cursor: zoom-out;
-}
-.plugin-donate-lightbox-img {
-    max-width: 96vw;
-    max-height: 92vh;
-    border-radius: 12px;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
-}
-.plugin-donate-label {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    margin: 0;
 }
 
 .plugin-donate-lightbox {
@@ -367,9 +546,40 @@
     background: rgba(0, 0, 0, 0.82);
     cursor: zoom-out;
 }
+
 .plugin-donate-lightbox-img {
     max-width: 96vw;
     max-height: 92vh;
-    border-radius: 12px;
+    border-radius: var(--lr-radius-lg);
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
+.plugin-donate-label {
+    font-size: 0.78rem;
+    color: var(--lr-text-muted);
+    margin: 0;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .reminders-input-area {
+        padding: 16px 16px 12px;
+    }
+
+    .reminders-input-wrapper {
+        padding: 14px;
+        border-radius: var(--lr-radius-md);
+    }
+
+    .reminders-list-container {
+        padding: 20px 16px 40px;
+    }
+
+    .reminder-card {
+        padding: 12px 14px;
+    }
+
+    .reminder-card-actions {
+        opacity: 1;
+    }
 }

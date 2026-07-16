@@ -8,7 +8,7 @@ export interface DateTimePickerOptions {
 }
 
 export class DateTimePickerModal extends Modal {
-    private options: DateTimePickerOptions;
+    private readonly options: DateTimePickerOptions;
     private dateInput: HTMLInputElement;
 
     constructor(app: App, options: Omit<DateTimePickerOptions, "app">) {
@@ -29,7 +29,7 @@ export class DateTimePickerModal extends Modal {
         dateGroup.createEl("label", { text: "提醒时间:" });
         this.dateInput = dateGroup.createEl("input", {
             type: "datetime-local",
-            cls: "datetime-input"
+            cls: "datetime-input",
         });
         this.dateInput.value = this.formatDateTimeLocal(initialDate);
 
@@ -37,13 +37,13 @@ export class DateTimePickerModal extends Modal {
 
         const cancelBtn = buttonGroup.createEl("button", {
             text: "取消",
-            cls: "datetime-btn datetime-btn-cancel"
+            cls: "datetime-btn datetime-btn-cancel",
         });
         cancelBtn.onclick = () => this.close();
 
         const confirmBtn = buttonGroup.createEl("button", {
             text: "确定",
-            cls: "datetime-btn datetime-btn-confirm"
+            cls: "datetime-btn datetime-btn-confirm",
         });
         confirmBtn.onclick = () => {
             const date = new Date(this.dateInput.value);

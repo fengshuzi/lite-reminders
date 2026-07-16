@@ -5,10 +5,21 @@ import { DateTimePickerModal } from "../components/DateTimePicker";
 
 export const VIEW_TYPE_REMINDERS = "reminders-view";
 
+interface ReminderGroup {
+    label: string;
+    reminders: Reminder[];
+}
+
 export class RemindersView extends ItemView {
     plugin: RemindersPlugin;
     private editHandler: ((reminder: Reminder) => void) | null = null;
     private listContainer: HTMLElement | null = null;
+    private textarea: HTMLTextAreaElement | null = null;
+    private submitBtn: HTMLButtonElement | null = null;
+    private cancelBtn: HTMLButtonElement | null = null;
+    private timeBtn: HTMLButtonElement | null = null;
+    private timeDisplay: HTMLElement | null = null;
+    private statusHint: HTMLElement | null = null;
 
     constructor(leaf: WorkspaceLeaf, plugin: RemindersPlugin) {
         super(leaf);
@@ -32,6 +43,7 @@ export class RemindersView extends ItemView {
     }
 
     async onClose(): Promise<void> {
+        // cleanup placeholder
     }
 
     render(): void {
@@ -45,86 +57,81 @@ export class RemindersView extends ItemView {
 
     private renderInputArea(container: HTMLElement): void {
         const inputArea = container.createDiv("reminders-input-area");
-
         const inputWrapper = inputArea.createDiv("reminders-input-wrapper");
 
-        const statusHint = inputWrapper.createDiv("reminders-input-hint");
-        statusHint.addClass("is-hidden");
+        this.statusHint = inputWrapper.createDiv("reminders-input-hint is-hidden");
 
-        const textarea = inputWrapper.createEl("textarea", {
+        this.textarea = inputWrapper.createEl("textarea", {
             cls: "reminders-input",
             attr: {
                 placeholder: "你现在在想什么？",
-                rows: "3"
-            }
+                rows: "3",
+            },
         });
 
-        const inputActions = inputWrapper.createDiv("reminders-input-actions");
+        this.timeDisplay = inputWrapper.createDiv("reminders-time-display is-hidden");
 
+        const inputActions = inputWrapper.createDiv("reminders-input-actions");
         const toolbar = inputActions.createDiv("reminders-input-toolbar");
 
         let selectedTime: Date | null = null;
 
-        const timeDisplay = inputWrapper.createDiv("reminders-time-display");
-        timeDisplay.addClass("is-hidden");
-
         const updateTimeDisplay = () => {
+            if (!this.timeDisplay) return;
             if (selectedTime) {
-                timeDisplay.removeClass("is-hidden");
-                timeDisplay.empty();
-                const inner = timeDisplay.createDiv({ cls: "reminders-time-display-inner" });
-                inner.createSpan({ text: `📅 ${this.formatDateTime(selectedTime.toISOString())}` });
+                this.timeDisplay.removeClass("is-hidden");
+                this.timeDisplay.empty();
+                const inner = this.timeDisplay.createDiv({ cls: "reminders-time-display-inner" });
+                const chip = inner.createDiv({ cls: "reminders-time-chip" });
+                setIcon(chip.createSpan(), "calendar-clock");
+                chip.createSpan({ text: this.formatDateTime(selectedTime.toISOString()), cls: "reminders-time-text" });
                 const clearBtn = inner.createEl("button", { text: "清除", cls: "reminders-time-clear" });
                 clearBtn.addEventListener("click", () => {
                     selectedTime = null;
-                    timeDisplay.addClass("is-hidden");
-                    timeBtn.removeClass("active");
+                    this.timeDisplay?.addClass("is-hidden");
+                    this.timeBtn?.removeClass("active");
+                    this.textarea?.focus();
                 });
             } else {
-                timeDisplay.addClass("is-hidden");
+                this.timeDisplay.addClass("is-hidden");
             }
         };
 
-        const timeBtn = toolbar.createEl("button", { cls: "reminders-toolbar-btn" });
-        setIcon(timeBtn, "calendar");
-        timeBtn.title = "选择日期时间";
-        timeBtn.onclick = () => {
+        this.timeBtn = toolbar.createEl("button", { cls: "reminders-toolbar-btn" });
+        setIcon(this.timeBtn, "calendar");
+        this.timeBtn.title = "选择日期时间";
+        this.timeBtn.onclick = () => {
             this.showDateTimePicker(selectedTime || new Date(), (date) => {
                 selectedTime = date;
                 updateTimeDisplay();
-                timeBtn.addClass("active");
+                this.timeBtn?.addClass("active");
+                this.textarea?.focus();
             });
         };
 
         const actionButtons = inputActions.createDiv("reminders-action-buttons");
 
-        const cancelBtn = actionButtons.createEl("button", {
-            cls: "reminders-cancel-btn",
-            text: "取消编辑"
+        this.cancelBtn = actionButtons.createEl("button", {
+            cls: "reminders-cancel-btn is-hidden",
+            text: "取消",
         });
-        cancelBtn.addClass("is-hidden");
 
-        const submitBtn = actionButtons.createEl("button", {
+        this.submitBtn = actionButtons.createEl("button", {
             cls: "reminders-submit-btn",
-            text: "NOTE"
+            text: "添加提醒",
         });
 
         let editingReminderId: string | null = null;
 
-        cancelBtn.onclick = () => {
-            textarea.value = "";
+        this.cancelBtn.onclick = () => {
+            this.resetComposer();
             selectedTime = null;
-            timeDisplay.addClass("is-hidden");
-            statusHint.addClass("is-hidden");
-            cancelBtn.addClass("is-hidden");
-            submitBtn.textContent = "NOTE";
-            textarea.placeholder = "你现在在想什么？";
             editingReminderId = null;
-            timeBtn.removeClass("active");
+            this.textarea?.focus();
         };
 
-        submitBtn.onclick = async () => {
-            const content = textarea.value.trim();
+        this.submitBtn.onclick = async () => {
+            const content = this.textarea?.value.trim();
             if (!content) return;
 
             const dueDate = selectedTime ? selectedTime.toISOString() : undefined;
@@ -135,59 +142,84 @@ export class RemindersView extends ItemView {
                 await this.plugin.storage.addReminder(content, dueDate);
             }
 
-            textarea.value = "";
+            this.resetComposer();
             selectedTime = null;
-            timeDisplay.addClass("is-hidden");
-            statusHint.addClass("is-hidden");
-            cancelBtn.addClass("is-hidden");
-            submitBtn.textContent = "NOTE";
-            textarea.placeholder = "你现在在想什么？";
             editingReminderId = null;
-            timeBtn.removeClass("active");
-
             await this.loadAndRender();
         };
 
-        textarea.onkeydown = (e) => {
+        this.textarea.onkeydown = (e) => {
             if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                submitBtn.click();
+                void this.submitBtn?.click();
             } else if (e.key === "Escape" && editingReminderId) {
                 e.preventDefault();
-                cancelBtn.click();
+                this.cancelBtn?.click();
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                this.textarea?.blur();
             }
+        };
+
+        this.textarea.oninput = () => {
+            this.autoResizeTextarea();
         };
 
         this.editHandler = (reminder: Reminder) => {
             editingReminderId = reminder.id;
-            textarea.value = reminder.title;
+            if (this.textarea) this.textarea.value = reminder.title;
             if (reminder.due) {
                 selectedTime = new Date(reminder.due);
                 updateTimeDisplay();
-                timeBtn.addClass("active");
+                this.timeBtn?.addClass("active");
             }
-            statusHint.textContent = "Modifying...";
-            statusHint.removeClass("is-hidden");
-            cancelBtn.removeClass("is-hidden");
-            submitBtn.textContent = "保存";
-            textarea.placeholder = "编辑提醒内容...";
-            textarea.focus();
-            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-
+            if (this.statusHint) {
+                this.statusHint.textContent = "正在编辑提醒";
+                this.statusHint.removeClass("is-hidden");
+            }
+            this.cancelBtn?.removeClass("is-hidden");
+            if (this.submitBtn) this.submitBtn.textContent = "保存";
+            if (this.textarea) {
+                this.textarea.placeholder = "编辑提醒内容...";
+                this.textarea.focus();
+                this.textarea.setSelectionRange(this.textarea.value.length, this.textarea.value.length);
+            }
+            this.autoResizeTextarea();
             this.containerEl.scrollTop = 0;
         };
+
+        this.autoResizeTextarea();
+    }
+
+    private autoResizeTextarea(): void {
+        if (!this.textarea) return;
+        this.textarea.style.height = "auto";
+        const maxHeight = 160;
+        this.textarea.style.height = `${Math.min(this.textarea.scrollHeight, maxHeight)}px`;
+    }
+
+    private resetComposer(): void {
+        if (this.textarea) {
+            this.textarea.value = "";
+            this.textarea.style.height = "auto";
+            this.textarea.placeholder = "你现在在想什么？";
+        }
+        this.timeDisplay?.empty();
+        this.timeDisplay?.addClass("is-hidden");
+        this.statusHint?.addClass("is-hidden");
+        this.cancelBtn?.addClass("is-hidden");
+        this.timeBtn?.removeClass("active");
+        if (this.submitBtn) this.submitBtn.textContent = "添加提醒";
     }
 
     private showDateTimePicker(initialDate: Date, onSelect: (date: Date) => void): void {
         const modal = new DateTimePickerModal(this.app, {
             initialDate,
-            onSelect: (date) => {
-                onSelect(date);
-            },
+            onSelect,
             onClose: () => {
+                // no-op
             },
         });
-
         modal.open();
     }
 
@@ -217,18 +249,67 @@ export class RemindersView extends ItemView {
             const emptyState = listContainer.createDiv({ cls: "reminders-empty-state" });
             emptyState.createDiv({ text: "💭", cls: "reminders-empty-icon" });
             emptyState.createDiv({ text: "还没有提醒事项", cls: "reminders-empty-title" });
-            emptyState.createDiv({
-                text: "在上方输入框开始记录",
-                cls: "reminders-empty-desc"
-            });
+            emptyState.createDiv({ text: "在上方输入框开始记录", cls: "reminders-empty-desc" });
             return;
         }
 
         const sorted = this.plugin.storage.sortReminders(reminders, "due");
+        const grouped = this.groupReminders(sorted);
 
-        sorted.forEach((reminder) => {
-            this.renderReminderItem(listContainer, reminder);
+        for (const group of grouped) {
+            this.renderGroup(listContainer, group);
+        }
+    }
+
+    private groupReminders(reminders: Reminder[]): ReminderGroup[] {
+        const groups = new Map<string, Reminder[]>();
+        for (const reminder of reminders) {
+            const key = reminder.due ? this.getDayKey(reminder.due) : "no-date";
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key)!.push(reminder);
+        }
+
+        const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
+            if (a === "no-date") return 1;
+            if (b === "no-date") return -1;
+            return a.localeCompare(b);
         });
+
+        return sortedKeys.map((key) => ({
+            label: this.getDayLabel(key),
+            reminders: groups.get(key)!,
+        }));
+    }
+
+    private getDayKey(isoStr: string): string {
+        const date = new Date(isoStr);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    }
+
+    private getDayLabel(key: string): string {
+        if (key === "no-date") return "未设置日期";
+        const today = this.getDayKey(new Date().toISOString());
+        const tomorrow = this.getDayKey(new Date(Date.now() + 86400000).toISOString());
+        const dayAfter = this.getDayKey(new Date(Date.now() + 172800000).toISOString());
+        if (key === today) return "今天";
+        if (key === tomorrow) return "明天";
+        if (key === dayAfter) return "后天";
+        return `${key.slice(5)}`;
+    }
+
+    private renderGroup(container: HTMLElement, group: ReminderGroup): void {
+        const groupEl = container.createDiv("reminders-day-group");
+        const header = groupEl.createDiv("reminders-day-header");
+        header.createSpan({ text: group.label, cls: "reminders-day-label" });
+        header.createSpan({ text: `${group.reminders.length}`, cls: "reminders-day-count" });
+
+        const list = groupEl.createDiv("reminders-cards-list");
+        for (const reminder of group.reminders) {
+            this.renderReminderItem(list, reminder);
+        }
     }
 
     private renderReminderItem(container: HTMLElement, reminder: Reminder): void {
@@ -238,13 +319,26 @@ export class RemindersView extends ItemView {
         const card = item.createDiv("reminder-card");
 
         const cardHeader = card.createDiv("reminder-card-header");
-
         const timeEl = cardHeader.createDiv("reminder-card-time");
-        timeEl.textContent = this.formatDateTime(reminder.due || reminder.created);
+        if (reminder.due) {
+            timeEl.textContent = this.formatTime(reminder.due);
+        } else {
+            timeEl.addClass("no-time");
+            timeEl.textContent = "无时间";
+        }
 
         const cardActions = cardHeader.createDiv("reminder-card-actions");
 
-        const moreBtn = cardActions.createEl("button", { cls: "reminder-more-btn" });
+        const completeBtn = cardActions.createEl("button", { cls: "reminder-action-btn" });
+        setIcon(completeBtn, "check");
+        completeBtn.title = "标记完成";
+        completeBtn.onclick = (e) => {
+            e.stopPropagation();
+            void this.plugin.storage.toggleComplete(reminder.id);
+            void this.loadAndRender();
+        };
+
+        const moreBtn = cardActions.createEl("button", { cls: "reminder-action-btn" });
         setIcon(moreBtn, "more-horizontal");
         moreBtn.title = "更多操作";
         moreBtn.onclick = (e) => {
@@ -253,10 +347,9 @@ export class RemindersView extends ItemView {
         };
 
         const cardBody = card.createDiv("reminder-card-body");
-
         cardBody.createDiv({ text: reminder.title, cls: "reminder-card-title" });
 
-        cardBody.ondblclick = () => {
+        cardBody.onclick = () => {
             this.editHandler?.(reminder);
         };
 
@@ -283,39 +376,39 @@ export class RemindersView extends ItemView {
         return `${year}-${month}-${day} ${hour}:${minute}`;
     }
 
+    private formatTime(isoStr: string): string {
+        const date = new Date(isoStr);
+        const hour = this.pad(date.getHours());
+        const minute = this.pad(date.getMinutes());
+        if (hour === "00" && minute === "00") {
+            return "全天";
+        }
+        return `${hour}:${minute}`;
+    }
+
     private showContextMenu(e: MouseEvent, reminder: Reminder): void {
         const menu = new Menu();
 
         menu.addItem((item) => {
-            item.setTitle("编辑")
-                .setIcon("pencil")
-                .onClick(() => {
-                    this.editHandler?.(reminder);
-                });
+            item.setTitle("编辑").setIcon("pencil").onClick(() => {
+                this.editHandler?.(reminder);
+            });
         });
 
         menu.addItem((item) => {
-            item.setTitle("标记完成")
-                .setIcon("check")
-                .onClick(() => {
-                    void this.confirmAndComplete(reminder);
-                });
+            item.setTitle("标记完成").setIcon("check").onClick(() => {
+                void this.plugin.storage.toggleComplete(reminder.id);
+                void this.loadAndRender();
+            });
         });
 
         menu.addItem((item) => {
-            item.setTitle("删除")
-                .setIcon("trash")
-                .onClick(() => {
-                    void this.confirmAndDelete(reminder);
-                });
+            item.setTitle("删除").setIcon("trash").onClick(() => {
+                void this.confirmAndDelete(reminder);
+            });
         });
 
         menu.showAtMouseEvent(e);
-    }
-
-    private async confirmAndComplete(reminder: Reminder): Promise<void> {
-        await this.plugin.storage.toggleComplete(reminder.id);
-        await this.loadAndRender();
     }
 
     private async confirmAndDelete(reminder: Reminder): Promise<void> {
@@ -323,15 +416,12 @@ export class RemindersView extends ItemView {
             const modal = new Modal(this.app);
             modal.titleEl.setText("确认删除");
             modal.contentEl.createEl("p", { text: "确定删除这条提醒事项吗？" });
-            const btnGroup = modal.contentEl.createDiv();
-            btnGroup.createEl("button", { text: "取消" }).onclick = () => {
+            const btnGroup = modal.contentEl.createDiv({ cls: "reminders-modal-actions" });
+            btnGroup.createEl("button", { text: "取消", cls: "reminders-modal-btn" }).onclick = () => {
                 modal.close();
                 resolve(false);
             };
-            const confirmBtn = btnGroup.createEl("button", {
-                text: "删除",
-                cls: "mod-warning",
-            });
+            const confirmBtn = btnGroup.createEl("button", { text: "删除", cls: "reminders-modal-btn mod-warning" });
             confirmBtn.onclick = () => {
                 modal.close();
                 resolve(true);
