@@ -271,7 +271,13 @@ export class RemindersView extends ItemView {
 
         const header = listContainer.createDiv("reminders-list-header");
         header.createDiv({ cls: "reminders-list-title", text: "提醒事项" });
-        const addBtn = header.createEl("button", { cls: "reminders-add-btn", text: "添加" });
+        const headerActions = header.createDiv("reminders-list-actions");
+        const refreshBtn = headerActions.createEl("button", { cls: "reminders-refresh-btn", text: "刷新" });
+        setIcon(refreshBtn.createSpan(), "refresh-cw");
+        refreshBtn.onclick = () => {
+            void this.loadAndRender();
+        };
+        const addBtn = headerActions.createEl("button", { cls: "reminders-add-btn", text: "添加" });
         setIcon(addBtn.createSpan(), "plus");
         addBtn.onclick = () => {
             this.showCreateComposer();
