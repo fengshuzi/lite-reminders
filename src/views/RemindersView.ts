@@ -14,6 +14,7 @@ export class RemindersView extends ItemView {
     plugin: RemindersPlugin;
     private editHandler: ((reminder: Reminder) => void) | null = null;
     private listContainer: HTMLElement | null = null;
+    private inputArea: HTMLElement | null = null;
     private textarea: HTMLTextAreaElement | null = null;
     private submitBtn: HTMLButtonElement | null = null;
     private cancelBtn: HTMLButtonElement | null = null;
@@ -56,7 +57,8 @@ export class RemindersView extends ItemView {
     }
 
     private renderInputArea(container: HTMLElement): void {
-        const inputArea = container.createDiv("reminders-input-area");
+        const inputArea = container.createDiv("reminders-input-area is-hidden");
+        this.inputArea = inputArea;
         const inputWrapper = inputArea.createDiv("reminders-input-wrapper");
 
         this.statusHint = inputWrapper.createDiv("reminders-input-hint is-hidden");
@@ -123,11 +125,26 @@ export class RemindersView extends ItemView {
 
         let editingReminderId: string | null = null;
 
+        const showComposer = (mode: "create" | "edit") => {
+            this.inputArea?.removeClass("is-hidden");
+            if (this.statusHint) {
+                this.statusHint.textContent = mode === "edit" ? "正在编辑提醒" : "添加提醒";
+                this.statusHint.removeClass("is-hidden");
+            }
+            if (this.submitBtn) this.submitBtn.textContent = mode === "edit" ? "保存" : "添加提醒";
+            if (this.textarea) {
+                this.textarea.placeholder = mode === "edit" ? "编辑提醒内容..." : "添加提醒事项...";
+                this.textarea.focus();
+            }
+            this.cancelBtn?.removeClass("is-hidden");
+            this.autoResizeTextarea();
+            this.containerEl.scrollTop = 0;
+        };
+
         this.cancelBtn.onclick = () => {
             this.resetComposer();
             selectedTime = null;
             editingReminderId = null;
-            this.textarea?.focus();
         };
 
         this.submitBtn.onclick = async () => {
@@ -157,7 +174,7 @@ export class RemindersView extends ItemView {
                 this.cancelBtn?.click();
             } else if (e.key === "Escape") {
                 e.preventDefault();
-                this.textarea?.blur();
+                this.cancelBtn?.click();
             }
         };
 
@@ -172,20 +189,22 @@ export class RemindersView extends ItemView {
                 selectedTime = new Date(reminder.due);
                 updateTimeDisplay();
                 this.timeBtn?.addClass("active");
+            } else {
+                selectedTime = null;
+                updateTimeDisplay();
+                this.timeBtn?.removeClass("active");
             }
-            if (this.statusHint) {
-                this.statusHint.textContent = "正在编辑提醒";
-                this.statusHint.removeClass("is-hidden");
-            }
-            this.cancelBtn?.removeClass("is-hidden");
-            if (this.submitBtn) this.submitBtn.textContent = "保存";
             if (this.textarea) {
-                this.textarea.placeholder = "编辑提醒内容...";
-                this.textarea.focus();
                 this.textarea.setSelectionRange(this.textarea.value.length, this.textarea.value.length);
             }
-            this.autoResizeTextarea();
-            this.containerEl.scrollTop = 0;
+            showComposer("edit");
+        };
+
+        this.showCreateComposer = () => {
+            editingReminderId = null;
+            selectedTime = null;
+            this.resetComposer();
+            showComposer("create");
         };
 
         this.autoResizeTextarea();
@@ -202,14 +221,19 @@ export class RemindersView extends ItemView {
         if (this.textarea) {
             this.textarea.value = "";
             this.textarea.style.height = "auto";
-            this.textarea.placeholder = "你现在在想什么？";
+            this.textarea.placeholder = "添加提醒事项...";
         }
         this.timeDisplay?.empty();
         this.timeDisplay?.addClass("is-hidden");
         this.statusHint?.addClass("is-hidden");
         this.cancelBtn?.addClass("is-hidden");
         this.timeBtn?.removeClass("active");
+        this.inputArea?.addClass("is-hidden");
         if (this.submitBtn) this.submitBtn.textContent = "添加提醒";
+    }
+
+    private showCreateComposer(): void {
+        // assigned dynamically in renderInputArea
     }
 
     private showDateTimePicker(initialDate: Date, onSelect: (date: Date) => void): void {
@@ -245,11 +269,19 @@ export class RemindersView extends ItemView {
 
         listContainer.empty();
 
+        const header = listContainer.createDiv("reminders-list-header");
+        header.createDiv({ cls: "reminders-list-title", text: "提醒事项" });
+        const addBtn = header.createEl("button", { cls: "reminders-add-btn", text: "添加" });
+        setIcon(addBtn.createSpan(), "plus");
+        addBtn.onclick = () => {
+            this.showCreateComposer();
+        };
+
         if (reminders.length === 0) {
             const emptyState = listContainer.createDiv({ cls: "reminders-empty-state" });
             emptyState.createDiv({ text: "💭", cls: "reminders-empty-icon" });
             emptyState.createDiv({ text: "还没有提醒事项", cls: "reminders-empty-title" });
-            emptyState.createDiv({ text: "在上方输入框开始记录", cls: "reminders-empty-desc" });
+            emptyState.createDiv({ text: "点击添加按钮创建，或直接在 Apple 提醒事项中添加。", cls: "reminders-empty-desc" });
             return;
         }
 
